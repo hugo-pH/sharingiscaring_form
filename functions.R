@@ -143,8 +143,9 @@ render.tables <- function(sqlite_path, table){
   
   df <- pull.data.from.db(sqlite_path, table) %>% 
     mutate(timestamp = ymd_hms(timestamp)) %>%
-    arrange(desc(timestamp))
-  
+    arrange(desc(timestamp)) %>% 
+    select(-year, -month, -day) %>% 
+    mutate(timestamp = as.character(timestamp)) 
   if(table == "orders"){
     df <- filter(df, purchased == "False")
   }
