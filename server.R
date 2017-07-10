@@ -11,19 +11,25 @@ library(shinyURL)
 theme_set(theme_bw(20))
 source("functions.R")
 
-# credentials <- list("test" = "202cb962ac59075b964b07152d234b70")
+paths <- read_csv("./paths.csv", col_types = cols(
+  file = col_character(),
+  path = col_character()
+))
 
-# Connect to sqlite database
-sqlite_path <- "./home_stuff.db"
+sqlite_path <- paths %>% filter(file == "sqlite") %>% pull(path)
+users_path <- paths %>% filter(file == "users") %>% pull(path)
+
 orders_table <- "orders"
 purchases_table <- "purchases"
 
-users <- read_csv("./users.csv") 
-# %>% unlist() %>% as.character()
+users_df <- read_csv(users_path, col_types = cols(
+  name = col_character(),
+  password = col_character()
+))
 
 
-credentials <- users %>%  pull(password) %>% as.list()
-names(credentials) <- users$name
+users <- users_df %>%  pull(password) %>% as.list()
+names(users) <- users_df$name
 
 shinyServer(function(input, output, session){
   
@@ -35,7 +41,7 @@ shinyServer(function(input, output, session){
   
   observeEvent(input$.login, {
     # browser()
-    if (isTRUE(credentials[[input$.username]]==input$.password)){
+    if (isTRUE(users[[input$.username]]==input$.password)){
       USER$Logged <- TRUE
     } else {
       show("message")
@@ -54,33 +60,15 @@ shinyServer(function(input, output, session){
                       ),
                       textOutput("message")
       ))
-    } else {
-    #   # Sidebar with a slider input for number of bins
-    #   sidebarLayout(
-    #     sidebarPanel(
-    #       sliderInput("bins",
-    #                   "Number of bins:",
-    #                   min = 1,
-    #                   max = 50,
-    #                   value = 30),
-    #       shinyURL.ui()
-    #     ),
-    #     
-    #     # Show a plot of the generated distribution
-    #     mainPanel(
-    #       plotOutput("distPlot")
-    #     )
-    #   )
-    #   
-    # }
+    } else{
       
       fluidPage(
         theme = shinytheme("sandstone"),
         shinyjs::useShinyjs(),
-        title = "The street of the children's dike",
-        div(id = "header",
-            h1("Sharing is caring"),
-            h4("")),
+        # # title = "The street of the children's dike",
+        # div(id = "header",
+        #     h1("Sharing is caring"),
+        #     h4("")),
         fluidRow(
           column(12,
                  radioButtons("action", "What do you want to do?", 
@@ -130,11 +118,9 @@ shinyServer(function(input, output, session){
     
     if(action() == "Add order"){
       tagList(
-        selectInput("name", "Who",
-                    c(" ",  users)),
         textInput("item", "What"),
         selectInput("priority", "Priority",
-                    c("",  "urgent", "take it easy")),
+                    c("urgent", "take it easy"), selected = "urgent"),
         
         actionButton("submit_order", "Submit order", class = "btn-primary"),
         
@@ -147,13 +133,8 @@ shinyServer(function(input, output, session){
       )
     }else if(action() == "Add purchase"){
       tagList(
-        # id = "form_buy",
-        h3 = "I bought something",
-        selectInput("buy.name", "Who",
-                    c(" ",  users)),
         checkboxInput("newitemcheck", "The item was not in the list", T ),
         uiOutput("new.item.check"),
-        ## TODO input for bought objects already in the list
         conditionalPanel(
           condition = "input.newitemcheck == true",
           textInput("new.purchase.item", "What")
@@ -199,7 +180,6 @@ shinyServer(function(input, output, session){
   
   
   output$new.item.check <- renderUI({
-    # browser()
     d_orders <- pull.data.from.db(sqlite_path, orders_table)
     items <-  d_orders %>% pull(item)
     conditionalPanel(
@@ -212,7 +192,8 @@ shinyServer(function(input, output, session){
   
   output$showPurchasesID <- renderUI({
     d_purchases <- pull.data.from.db(sqlite_path = sqlite_path, db_table = purchases_table)
-    timestamp <-  d_purchases %>% pull(timestamp)
+    timestamp <-  d_purchases %>% mutate(timestamp = ymd_hms(timestamp)) %>%
+      arrange(desc(timestamp)) %>% pull(timestamp)
     
     
     selectInput("remove.purchase.id", "Select timestamp of item to be removed",
@@ -221,7 +202,8 @@ shinyServer(function(input, output, session){
   
   output$showOrdersID <- renderUI({
     d_orders <- pull.data.from.db(sqlite_path, orders_table) %>% filter(purchased == "False")
-    timestamp <-  d_orders %>% pull(timestamp)
+    timestamp <-  d_orders %>% mutate(timestamp = ymd_hms(timestamp)) %>%
+      arrange(desc(timestamp)) %>% pull(timestamp)
     
     selectInput("remove.order.id", "Select ID of item to be removed",
                 timestamp)
@@ -369,7 +351,7 @@ shinyServer(function(input, output, session){
       year = year(now()),
       month = month(now()),
       day = day(now()),
-      person = input$name,
+      person = input$.username,
       item = input$item,
       priority = input$priority,
       purchased = "False"
@@ -387,7 +369,7 @@ shinyServer(function(input, output, session){
       year = year(now()),
       month = month(now()),
       day = day(now()),
-      person = input$buy.name,
+      person = input$.username,
       item = NA,
       amount = as.numeric(input$price)
     )

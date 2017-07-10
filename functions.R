@@ -142,7 +142,8 @@ remove.entry <- function(arg.list) {
 render.tables <- function(sqlite_path, table){
   
   df <- pull.data.from.db(sqlite_path, table) %>% 
-    arrange(-year, -month, -day)
+    mutate(timestamp = ymd_hms(timestamp)) %>%
+    arrange(desc(timestamp))
   
   if(table == "orders"){
     df <- filter(df, purchased == "False")

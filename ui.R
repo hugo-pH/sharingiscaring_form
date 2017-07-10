@@ -9,7 +9,7 @@ shinyUI(fluidPage(
   ),
   useShinyjs(),
   
-  titlePanel("Password protected Shiny app"),
+  titlePanel("Sharing is caring in the street of the children's dike"),
   
   uiOutput("app")
 ))
