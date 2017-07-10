@@ -153,3 +153,4 @@ render.tables <- function(sqlite_path, table){
     options = list(searching = FALSE, lengthChange = FALSE)
   )
 }
+

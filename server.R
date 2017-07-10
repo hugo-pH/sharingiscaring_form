@@ -1,26 +1,125 @@
 library(shiny)
-# library(rdrop2)
+library(shinythemes)
 library(lubridate)
 library(tidyverse)
 library(stringr)
 library(wesanderson)
 library(ggthemes)
 library(pool)
+library(shinyjs)
+library(shinyURL)
 theme_set(theme_bw(20))
 source("functions.R")
+
+# credentials <- list("test" = "202cb962ac59075b964b07152d234b70")
 
 # Connect to sqlite database
 sqlite_path <- "./home_stuff.db"
 orders_table <- "orders"
 purchases_table <- "purchases"
 
-users <- read.csv("./users.csv") %>% unlist() %>% as.character()
+users <- read_csv("./users.csv") 
+# %>% unlist() %>% as.character()
 
+
+credentials <- users %>%  pull(password) %>% as.list()
+names(credentials) <- users$name
 
 shinyServer(function(input, output, session){
+  
+  
+  
+  shinyURL.server()
+  
+  USER <- reactiveValues(Logged = FALSE)
+  
+  observeEvent(input$.login, {
+    # browser()
+    if (isTRUE(credentials[[input$.username]]==input$.password)){
+      USER$Logged <- TRUE
+    } else {
+      show("message")
+      output$message = renderText("Invalid user name or password")
+      delay(2000, hide("message", anim = TRUE, animType = "fade"))
+    }
+  })
+  
+  output$app = renderUI(
+    if (!isTRUE(USER$Logged)) {
+      fluidRow(column(width=4, offset = 4,
+                      wellPanel(id = "login",
+                                textInput(".username", "Username:"),
+                                passwordInput(".password", "Password:"),
+                                div(actionButton(".login", "Log in"), style="text-align: center;")
+                      ),
+                      textOutput("message")
+      ))
+    } else {
+    #   # Sidebar with a slider input for number of bins
+    #   sidebarLayout(
+    #     sidebarPanel(
+    #       sliderInput("bins",
+    #                   "Number of bins:",
+    #                   min = 1,
+    #                   max = 50,
+    #                   value = 30),
+    #       shinyURL.ui()
+    #     ),
+    #     
+    #     # Show a plot of the generated distribution
+    #     mainPanel(
+    #       plotOutput("distPlot")
+    #     )
+    #   )
+    #   
+    # }
+      
+      fluidPage(
+        theme = shinytheme("sandstone"),
+        shinyjs::useShinyjs(),
+        title = "The street of the children's dike",
+        div(id = "header",
+            h1("Sharing is caring"),
+            h4("")),
+        fluidRow(
+          column(12,
+                 radioButtons("action", "What do you want to do?", 
+                              choices = c("Add order", "Remove order" , "Add purchase", "Remove purchase"), 
+                              selected = "Add purchase"),
+                 uiOutput("chooseFormType"), 
+                 shinyjs::hidden(
+                   div(
+                     id = "thankyou_msg",
+                     h3("Thanks, your response was submitted successfully!"),
+                     actionLink("submit_another", "Submit another response")
+                   )
+                 )
+          )
+        ),
+        fluidRow(
+          tabsetPanel(
+            tabPanel("Summary", uiOutput("table.orders"), uiOutput("table.purchases"))
+            # tabPanel("Purchases on time", plotOutput("plot.time.purchases")),
+            # tabPanel("Total month", plotOutput("plot.total.purchases")),
+            # tabPanel("Balance", tableOutput("adjust.payments"))
+            
+          )
+        )
+        
+      )
+      
+    }
+  )
+  
+  
+  
+  
+  
+  
   action <- reactive({
     input$action
   })
+  
   
   #########################
   ## render UI functions ##
