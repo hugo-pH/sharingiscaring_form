@@ -1,3 +1,4 @@
+# server needs_app_db
 library(shiny)
 library(shinythemes)
 library(lubridate)
@@ -33,14 +34,13 @@ names(users) <- users_df$name
 
 shinyServer(function(input, output, session){
   
-  
+  ## Password input. Extracted from https://github.com/aoles/shinypass
   
   shinyURL.server()
   
   USER <- reactiveValues(Logged = FALSE)
   
   observeEvent(input$.login, {
-    # browser()
     if (isTRUE(users[[input$.username]]==input$.password)){
       USER$Logged <- TRUE
     } else {
@@ -60,15 +60,13 @@ shinyServer(function(input, output, session){
                       ),
                       textOutput("message")
       ))
+      
+    # End password input  
     } else{
       
       fluidPage(
         theme = shinytheme("sandstone"),
         shinyjs::useShinyjs(),
-        # # title = "The street of the children's dike",
-        # div(id = "header",
-        #     h1("Sharing is caring"),
-        #     h4("")),
         fluidRow(
           column(12,
                  radioButtons("action", "What do you want to do?", 
@@ -87,10 +85,6 @@ shinyServer(function(input, output, session){
         fluidRow(
           tabsetPanel(
             tabPanel("Summary", uiOutput("table.orders"), uiOutput("table.purchases"))
-            # tabPanel("Purchases on time", plotOutput("plot.time.purchases")),
-            # tabPanel("Total month", plotOutput("plot.total.purchases")),
-            # tabPanel("Balance", tableOutput("adjust.payments"))
-            
           )
         )
         

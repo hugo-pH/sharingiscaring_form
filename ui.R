@@ -1,7 +1,7 @@
 library(shinyjs)
 
 shinyUI(fluidPage(
-  # Add Javascript
+  # Add Javascript for password input
   tags$head(
     tags$link(rel="stylesheet", type="text/css",href="style.css"),
     tags$script(type="text/javascript", src = "md5.js"),
