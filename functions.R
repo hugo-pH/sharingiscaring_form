@@ -60,69 +60,60 @@ pull.data.from.db <- function(sqlite_path, db_table){
 
 
 update.current.orders <- function(arg.list) {
-  # browser()
-  # get present indexes
-  db_data <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
-                              db_table = arg.list$orders_table)
-  # if(length(db_data$idx > 0)){
-  # new_idx <- max(db_data$idx) + 1 
-  # }else{
-  #   new_idx <- 0
-  # }
+  # db_data <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
+                              # db_table = arg.list$orders_table)
+  
   pool <- dbPool(RSQLite::SQLite(), dbname = arg.list$sqlite_path)
   # db_insert_into(pool, arg.list$orders_table, arg.list$data %>% mutate(idx = new_idx) , temporary = F)
   db_insert_into(pool, arg.list$orders_table, arg.list$data, temporary = F)
+  
+  
+  if(!(arg.list$new_common_item)){
+    new_common_item_df <- arg.list$data %>% 
+      select(item) 
+    new_common_item <- new_common_item_df %>% pull(item)
+    
+    db_c_items <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
+                                    db_table = arg.list$common_item_table) %>% pull(item)
+    
+    if (new_common_item %in% db_c_items){
+      pool <- dbPool(RSQLite::SQLite(), dbname = arg.list$sqlite_path)
+      db_insert_into(pool, arg.list$commom_item_table, new_common_item_df, temporary = F)  
+    }
+  }
   poolClose(pool)
 }
 
-remove.orders <- function(arg.list) {
-  db.responses.dir <- arg.list$db.responses.dir
-  data  <- arg.list$data
-  drop.folder = arg.list$drop.folder
-  orders.file.name = arg.list$orders.file.name
-  purchase.file.name = arg.list$purchase.file.name
-  id.rm = arg.list$id
-  
-  data.updated <- data %>% 
-    filter(id != id.rm)
-  # filter(!(date == args$date & name == args$name & item == args$item))
-  
-  filePath <- file.path(tempdir(), orders.file.name)
-  write.csv(data.updated, filePath, row.names = FALSE, quote = TRUE)
-  # Upload the file to Dropbox
-  drop_upload(filePath, dest = drop.folder)
-}
-
-
 update.purchase.answers <- function(arg.list) {
-  db_purchases <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
-                              db_table = arg.list$purchases_table)
-  # if(length(db_purchases$idx > 0)){
-  #   new_idx <- max(db_purchases$idx) + 1 
-  # }else{
-  #   new_idx <- 0
-  # }
+  browser()
+  ## add item to purchases table
   pool <- dbPool(RSQLite::SQLite(), dbname = arg.list$sqlite_path)
-  # db_insert_into(pool, arg.list$purchases_table, arg.list$data %>% mutate(idx = new_idx), temporary = F)
   db_insert_into(pool, arg.list$purchases_table, arg.list$data, temporary = F)
-  # poolClose(pool)
   
-  
-  print("loaded second time")
-  
-  if(arg.list$new_item == FALSE){
-    
-    
-    db_orders <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
-                                      db_table = arg.list$orders_table)
+  # If item was in orders list, update "purchased" state to true
+  if(arg.list$ordered_item){
     item <-  arg.list$data %>% pull(item)
-    # item  = "h"
-    # time <- db_orders %>% filter(item == item) %>% pull(item)
-    query<- dbplyr::build_sql("UPDATE orders SET purchased =" , "True", " WHERE item = ", item)
+    query<- dbplyr::build_sql("UPDATE orders SET purchased =" , " 'True'", " WHERE item = ", item)
     conn <-  poolCheckout(pool)
     pool::dbSendQuery( conn, query)
-    poolClose(pool)
+    # poolClose(pool)
   }
+  if(!(arg.list$new_common_item)){
+    new_common_item_df <- arg.list$data %>% 
+      select(item) 
+    new_common_item <- new_common_item_df %>% pull(item)
+    
+    db_c_items <- pull.data.from.db(sqlite_path = arg.list$sqlite_path,
+                     db_table = arg.list$common_item_table) %>% pull(item)
+    
+    if (new_common_item %in% db_c_items){
+      pool <- dbPool(RSQLite::SQLite(), dbname = arg.list$sqlite_path)
+      db_insert_into(pool, arg.list$commom_item_table, new_common_item_df, temporary = F)  
+    }
+    
+
+  }
+  poolClose(pool)
 }
 
 
